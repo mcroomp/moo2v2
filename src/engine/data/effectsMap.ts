@@ -139,7 +139,8 @@ export const EFFECTS: Record<string, EffectSpec> = {
   battleoids: { kind: 'ground_unit', stub: 'ground combat (Phase 6)' },
   recyclotron: { kind: 'building', handler: 'economy' }, // +1 prod/pop unit, pollution-free (economy.ts)
   automated_repair_unit: { kind: 'ship_special', handler: 'combat' }, // ~0.5% structure/tick in combat
-  artificial_planet: { kind: 'project', stub: 'asteroid/gas giant conversion (Phase 6)' },
+  artificial_planet: { kind: 'project', handler: 'pipeline' }, // converts an asteroid belt / gas giant in-system into a barren world (completeItem)
+  construction_ship: { kind: 'unlock', handler: 'commands' }, // mode-gated endgame ship: construct_planet rebuilds an asteroid belt / gas giant into a barren world
   robotic_factory: { kind: 'building', handler: 'economy' }, // +5..+25 prod by minerals
   deep_core_mine: { kind: 'building', modifiers: [col('prod_flat', 15), col('prod_coeff', 3)] },
   core_waste_dump: { kind: 'building', modifiers: [col('pollution_zero', 1)] },
@@ -250,10 +251,10 @@ export const EFFECTS: Record<string, EffectSpec> = {
     kind: 'building',
     modifiers: [col('farm_coeff', 1), col('prod_coeff', 1), col('sci_coeff', 1)],
   },
-  confederation: { kind: 'system', stub: 'advanced government (Phase 6)' },
-  imperium: { kind: 'system', stub: 'advanced government (Phase 6)' },
-  federation: { kind: 'system', stub: 'advanced government (Phase 6)' },
-  galactic_unification: { kind: 'system', stub: 'advanced government (Phase 6)' },
+  confederation: { kind: 'system', handler: 'shipdesign' }, // advanced feudal: warships 1/3 cost, research penalty -50% -> -25% (economy)
+  imperium: { kind: 'system', handler: 'movement' }, // advanced dictatorship: +50% command points, +20 spy defense (espionage)
+  federation: { kind: 'system', handler: 'economy' }, // advanced democracy: +50% money/research bonuses become +75%
+  galactic_unification: { kind: 'system', handler: 'economy' }, // advanced unification: +50% farm/prod bonuses become +100%
   galactic_currency_exchange: { kind: 'building', modifiers: [col('money_coeff_halves', 1)] },
 
   // ---------------- non-application buildables & starting items ----------------
@@ -275,6 +276,7 @@ export const EFFECTS: Record<string, EffectSpec> = {
 
 /** Race pick implementation ledger (checked by the coverage test). */
 export const PICK_STATUS: Record<string, { handler?: string; stub?: string }> = {
+  out_of_box_thinking: { handler: 'research' }, // buy skipped apps of completed fields with RP (commands.ts queue_extra_research)
   growth1: { handler: 'economy' },
   growth2: { handler: 'economy' },
   growth3: { handler: 'economy' },

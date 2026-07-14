@@ -36,6 +36,8 @@ export interface RaceTraits {
   stealthyShips: boolean;
   transDimensional: boolean;
   warlord: boolean;
+  /** Out-of-the-Box Thinking: may buy skipped applications from completed fields with RP (gated by the outOfBoxThinking game mode) */
+  outOfBoxThinking: boolean;
 }
 
 function pickValue(picks: ReadonlySet<string>, base: string): number {
@@ -82,7 +84,23 @@ export function resolveTraits(pickIds: readonly string[]): RaceTraits {
     stealthyShips: picks.has('stealthy_ships'),
     transDimensional: picks.has('trans_dimensional'),
     warlord: picks.has('warlord'),
+    outOfBoxThinking: picks.has('out_of_box_thinking'),
   };
+}
+
+/** Advanced-government application per base government (sociology field 6).
+ * Researching the app matching YOUR government upgrades it; a mismatched app
+ * (e.g. a democracy stealing imperium) has no effect. */
+export const ADVANCED_GOV_APP: Record<Government, string> = {
+  feudal: 'confederation',
+  dictatorship: 'imperium',
+  democracy: 'federation',
+  unification: 'galactic_unification',
+};
+
+/** Does this empire run the advanced form of its government? */
+export function hasAdvancedGov(empire: { government: Government; knownApps: readonly string[] }): boolean {
+  return empire.knownApps.includes(ADVANCED_GOV_APP[empire.government]);
 }
 
 /** Gravity mismatch steps for a race on a planet: 0, 1, or 2. Mismatch is

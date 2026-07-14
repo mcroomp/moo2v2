@@ -345,6 +345,12 @@ export const PICK_ROWS: readonly PickRow[] = [
     "cost": 4,
     "value": null,
     "meaning": "Command/crew/combat advantage; includes CP bonus in parameter table."
+  },
+  {
+    "id": "out_of_box_thinking",
+    "cost": 2,
+    "value": null,
+    "meaning": "Out-of-the-Box Thinking: may buy skipped technologies from already-completed fields with research points (requires the matching game option)."
   }
 ] as const;
 
@@ -619,6 +625,13 @@ export const BUILDABLE_ROWS: readonly BuildableRow[] = [
     "id": "colony_ship",
     "techId": 40,
     "cost": 500,
+    "maintenance": 0,
+    "group": "ship"
+  },
+  {
+    "id": "construction_ship",
+    "techId": 0,
+    "cost": 400,
     "maintenance": 0,
     "group": "ship"
   },
@@ -5826,8 +5839,8 @@ export const APPLICATION_ROWS: readonly ApplicationRow[] = [
     "subject": "sociology",
     "fieldId": "advanced_governments",
     "techId": null,
-    "effectSummary": "",
-    "effectSummaryLen": 0
+    "effectSummary": "Advanced form of feudalism. Warships cost only one-third of normal production and the feudal research penalty is halved to -25%.",
+    "effectSummaryLen": 128
   },
   {
     "id": "imperium",
@@ -5844,8 +5857,8 @@ export const APPLICATION_ROWS: readonly ApplicationRow[] = [
     "subject": "sociology",
     "fieldId": "advanced_governments",
     "techId": null,
-    "effectSummary": "",
-    "effectSummaryLen": 0
+    "effectSummary": "Advanced form of democracy. The +50% income and research bonuses rise to +75%.",
+    "effectSummaryLen": 78
   },
   {
     "id": "galactic_unification",
@@ -5853,8 +5866,8 @@ export const APPLICATION_ROWS: readonly ApplicationRow[] = [
     "subject": "sociology",
     "fieldId": "advanced_governments",
     "techId": null,
-    "effectSummary": "",
-    "effectSummaryLen": 0
+    "effectSummary": "Advanced form of unification. The +50% food and industry bonuses rise to +100%.",
+    "effectSummaryLen": 79
   },
   {
     "id": "galactic_currency_exchange",

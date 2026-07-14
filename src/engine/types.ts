@@ -120,6 +120,10 @@ export interface EmpireDesign {
   specials: string[];
   weapons: Array<{ weapon: string; count: number; mods: string[]; arc?: 'F' | 'FX' | 'R' | '360' }>;
   obsolete: boolean;
+  /** engine-maintained default design of its hull class: refitted with the
+   * best known components whenever research improves the fit (pipeline
+   * s11_defaultDesignRefresh). Never set on player-saved designs. */
+  auto?: boolean;
   /** cosmetic: which model variant of the hull class this design uses within
    * the empire's ship style (absent = derived from design id) */
   modelIdx?: number;
@@ -184,7 +188,7 @@ export interface Empire {
   eliminated: boolean;
 }
 
-export type ShipKind = 'colony_ship' | 'outpost_ship' | 'transport' | 'scout';
+export type ShipKind = 'colony_ship' | 'outpost_ship' | 'transport' | 'scout' | 'construction_ship';
 
 export type ShipLocation =
   | { kind: 'star'; starId: number }
@@ -245,6 +249,10 @@ export interface GameStateSettings {
     stickyBuild: boolean;
     antarans: boolean;
     randomEvents: boolean;
+    /** unlocks the out_of_box_thinking race pick (absent in older saves = off) */
+    outOfBoxThinking?: boolean;
+    /** unlocks the planetary construction ship once ALL construction fields are researched (absent = off) */
+    constructionShip?: boolean;
   };
   battleOrdersTimeoutMs: number;
   debugCommands: boolean;

@@ -16,6 +16,7 @@ import { areAtWar, relationKey, setRelation } from './battles';
 import { anyEmpireContact, metEmpireIds } from './contact';
 import { buyCost, colonyMaxPop, colonyPopUnits as popUnitsOf, empireOf, farmingViable, freeFreighters, traitsOf } from './economy';
 import { allocId, allocWorldId } from './ids';
+import { constructAsBarren } from './terraform';
 import { canQueue, itemCost, parseRefitItem } from './items';
 import { inRange, settlerTravelTurns, shipStar, supportStars, travelTurns } from './movement';
 import { starDistance } from './galaxy';
@@ -240,11 +241,15 @@ interface ExtraResearchPayload {
 }
 
 const validateExtraResearch: Validator = (state, cmd) => {
-  if (!state.settings.modes.creativeVariant) return 'creative-variant mode is off';
   const p = cmd.payload as ExtraResearchPayload;
   const empire = state.empires.find((e) => e.id === cmd.playerId);
   if (!empire) return 'no empire';
-  if (!traitsOf(empire).creative) return 'only creative races may buy extra applications';
+  const traits = traitsOf(empire);
+  const creativePath = state.settings.modes.creativeVariant && traits.creative;
+  const outOfBoxPath = state.settings.modes.outOfBoxThinking === true && traits.outOfBoxThinking;
+  if (!creativePath && !outOfBoxPath) {
+    return 'buying skipped applications needs creative (creative-variant mode) or out-of-the-box thinking (its game option)';
+  }
   if (p.remove) {
     return empire.research.extraQueue.includes(p.appId) ? null : `${p.appId} not queued`;
   }
@@ -473,6 +478,38 @@ const applyOutpost: Applier = (state, cmd) => {
   state.colonies.sort((a, b) => a.id - b.id);
 };
 
+// ---------- construct_planet (planetary construction ship) ----------
+
+const validateConstructPlanet: Validator = (state, cmd) => {
+  if (state.settings.modes.constructionShip !== true) return 'the construction-ship game option is off';
+  const p = cmd.payload as ColonizePayload;
+  const ships = ownShips(state, cmd, [p?.shipId]);
+  if (typeof ships === 'string') return ships;
+  const ship = ships[0]!;
+  if (ship.shipKind !== 'construction_ship') return `ship ${ship.id} is not a construction ship`;
+  if (ship.location.kind !== 'star') return 'ship is in transit';
+  const planet = state.planets.find((x) => x.id === p.planetId);
+  if (!planet) return `no planet ${p.planetId}`;
+  if (planet.starId !== ship.location.starId) return 'ship is not at that system';
+  if (planet.body !== 'asteroids' && planet.body !== 'gas_giant') return 'only asteroid belts and gas giants can be constructed';
+  if (hostileMonsterAt(state, planet.starId)) return 'the system is guarded — destroy its keeper first';
+  return null;
+};
+
+const applyConstructPlanet: Applier = (state, cmd, events) => {
+  const p = cmd.payload as ColonizePayload;
+  const ship = state.ships.find((s) => s.id === p.shipId)!;
+  const planet = state.planets.find((x) => x.id === p.planetId)!;
+  // outposts on the old body (asteroid anchors) survive on the new world
+  state.ships = state.ships.filter((s) => s.id !== ship.id); // consumed by the build
+  constructAsBarren(planet);
+  events?.push({
+    visibleTo: cmd.playerId,
+    kind: 'planet_constructed',
+    payload: { planetId: planet.id, orbit: planet.orbit, starId: planet.starId },
+  });
+};
+
 // ---------- scrap_ship ----------
 
 const validateScrap: Validator = (state, cmd) => {
@@ -487,7 +524,7 @@ const applyScrap: Applier = (state, cmd) => {
   const empire = empireOf(state, cmd.playerId);
   // MOO2 scrap value: a quarter of the ship's production cost, in BC —
   // designed warships use their design's real cost
-  const costs: Record<string, number> = { colony_ship: 500, outpost_ship: 100, transport: 100, scout: 10 };
+  const costs: Record<string, number> = { colony_ship: 500, outpost_ship: 100, transport: 100, scout: 10, construction_ship: 400 };
   const cost =
     ship.shipKind === 'design' && ship.designId !== null
       ? (itemCost(state, cmd.playerId, `design:${ship.designId}`) ?? 0)
@@ -584,7 +621,8 @@ const validateSaveDesign: Validator = (state, cmd) => {
   const empire = empireOf(state, cmd.playerId);
   if (typeof p?.name !== 'string' || !p.name.trim() || p.name.length > 30) return 'bad design name';
   if (p.modelIdx !== undefined && (!Number.isSafeInteger(p.modelIdx) || p.modelIdx < 0 || p.modelIdx > 31)) return 'bad model variant';
-  if (empire.designs.filter((d) => !d.obsolete).length >= 12) return 'design limit reached (obsolete one first)';
+  // engine-maintained defaults (design.auto) don't consume player slots
+  if (empire.designs.filter((d) => !d.obsolete && !d.auto).length >= 12) return 'design limit reached (obsolete one first)';
   // players may only design MOBILE hulls they have researched. designStats
   // deliberately exempts base hulls from the availability check (baseDesign
   // auto-designs stations with them) — without this gate a modified client
@@ -1500,6 +1538,10 @@ export const COMMANDS: Record<string, { validate: Validator; apply: Applier }> =
   build_outpost: {
     validate: (s, c) => validateSettle(s, c, 'outpost_ship'),
     apply: applyOutpost,
+  },
+  construct_planet: {
+    validate: validateConstructPlanet,
+    apply: applyConstructPlanet,
   },
   scrap_ship: { validate: validateScrap, apply: applyScrap },
   scrap_outpost: { validate: validateScrapOutpost, apply: applyScrapOutpost },

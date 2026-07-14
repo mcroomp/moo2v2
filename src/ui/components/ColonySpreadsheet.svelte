@@ -932,7 +932,14 @@
             </span>
           </td>
         {/each}
-        <td class:neg={row.output.foodNet < 0} data-testid="foodnet-{row.id}" title={ex.farm}>{row.output.foodNet >= 0 ? '+' : ''}{row.output.foodNet}</td>
+        <td
+          class:neg={row.output.foodNet < 0}
+          class:starving={row.foodLack > 0}
+          data-testid="foodnet-{row.id}"
+          title={row.output.foodNet < 0
+            ? `${ex.farm} — deficit ${-row.output.foodNet}: ${-row.output.foodNet - row.foodLack} covered by freighters/chartered haulers${row.foodLack > 0 ? `, ${row.foodLack} UNCOVERED (starvation)` : ''}`
+            : ex.farm}
+        >{row.output.foodNet >= 0 ? '+' : ''}{row.output.foodNet}{#if row.output.foodNet < 0 && row.foodLack === 0}<span class="fed" title="deficit fully covered by food shipments">✓</span>{/if}</td>
         <td data-testid="prod-{row.id}" title={ex.prod}>
           {row.output.prodToQueue || row.output.prod}{#if row.output.pollution > 0}<span class="poll">−{row.output.pollution}☁</span>{/if}
         </td>
@@ -1352,6 +1359,17 @@
     color: var(--bad);
     margin-left: 0.25rem;
     opacity: 0.9;
+  }
+  /* uncovered food shortage: starvation is imminent, shout louder than a
+     plain deficit that freighters are quietly covering */
+  td.starving {
+    font-weight: 700;
+    text-decoration: underline wavy var(--bad);
+  }
+  .fed {
+    color: var(--good, #5ee08a);
+    font-size: 0.75em;
+    margin-left: 0.15em;
   }
   .cellbar {
     display: inline-block;

@@ -69,6 +69,7 @@
       case 'council_convened': return `the Galactic Council convenes: ${(p['candidates'] as number[]).map(nameOf).join(' vs ')}`;
       case 'council_result': return `council result: ${p['winner'] === null ? 'no ruler elected' : `${nameOf(p['winner'])} elected!`}`;
       case 'terraformed': return `${colonyOf(p['colonyId'])} terraformed to ${p['climate']}`;
+      case 'planet_constructed': return `planetary construction complete ${p['colonyId'] !== undefined ? `at ${colonyOf(p['colonyId'])}` : `at ${starOf(p['starId'])}`}: orbit ${p['orbit']} is now a barren world`;
       case 'monster_slain': return `the ${p['kind']} at ${starOf(p['starId'])} was slain`;
       case 'guardian_defeated': return `${nameOf(p['empireId'])} defeated the Guardian of Orion!`;
       case 'antaran_raid': return `Andromedan raiders strike ${nameOf(p['empireId'])}!`;
@@ -88,6 +89,9 @@
       case 'event_plague': return `plague at ${colonyOf(p['colonyId'])}`;
       case 'proposal_failed': return `agreement between ${nameOf(p['a'])} and ${nameOf(p['b'])} fell through: ${p['reason']}`;
       case 'ship_stranded_retreat': return `a stranded ship beyond fuel range is falling back to ${starOf(p['to'])}`;
+      case 'design_updated': return p['replaced'] === null
+        ? `new default ${String(p['hull']).replaceAll('_', ' ')} design available: ${p['name']}`
+        : `⚙ default design "${p['name']}" refitted with our latest technology (new builds use it; refit older ships at a starbase)`;
       case 'natives_joined': return `natives joined ${colonyOf(p['colonyId'])} — they will work the farms (${p['units']} pop)`;
       case 'splinter_joined': return `a splinter colony rejoined our society at ${colonyOf(p['colonyId'])} (+${p['units']} pop)`;
       default: return `${kind} ${JSON.stringify(p)}`;

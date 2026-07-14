@@ -36,14 +36,14 @@ describe('generated data is current', () => {
 
 describe('table counts (vs mechanics docs)', () => {
   it('has the documented row counts', () => {
-    expect(PICK_ROWS.length).toBe(53);
+    expect(PICK_ROWS.length).toBe(54);
     expect(FIELD_ROWS.length).toBe(82);
     expect(TECH_ROWS.length).toBe(173);
     expect(HULL_ROWS.length).toBe(9);
     expect(WEAPON_ROWS.length).toBe(45);
     expect(WEAPON_MOD_ROWS.length).toBe(14);
     expect(APPLICATION_ROWS.length).toBe(191);
-    expect(BUILDABLE_ROWS.length).toBe(69);
+    expect(BUILDABLE_ROWS.length).toBe(70);
   });
 });
 

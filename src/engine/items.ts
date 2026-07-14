@@ -2,11 +2,11 @@
 // Buildings are unique per colony; ships/projects repeat. Availability derives
 // from the empire's known applications plus the always-known starting items.
 
-import { ALWAYS_KNOWN_ITEMS, applicationById, buildableById } from './data/index';
+import { ALWAYS_KNOWN_ITEMS, applicationById, buildableById, FIELD_ROWS, FIELD_SUBJECTS } from './data/index';
 import type { Colony, Empire, GameState, Planet } from './types';
 import { planetOf } from './economy';
 import { designStats } from './shipdesign';
-import { canTerraform, terraformCost, unsettledPlanetsInSystem } from './terraform';
+import { canTerraform, convertiblePlanetsInSystem, terraformCost, unsettledPlanetsInSystem } from './terraform';
 
 /** Ship-like buildables that spawn units instead of colony structures. */
 export const SHIP_BUILDABLES = new Set([
@@ -14,7 +14,25 @@ export const SHIP_BUILDABLES = new Set([
   'outpost_ship',
   'transport',
   'freighter_fleet',
+  'construction_ship',
 ]);
+
+/** Buildables gated by a game-mode option instead of a researched
+ * application (checked in canQueue; listed for the unlocks audit). */
+export const MODE_GATED_BUILDABLES = new Set(['construction_ship']);
+
+/** The planetary construction ship unlocks once EVERY construction field is
+ * researched (hyper-advanced repeats excluded) — an endgame construction
+ * capstone, only offered when the game option is on. */
+export function constructionShipUnlocked(state: GameState, empire: Empire): boolean {
+  if (state.settings.modes.constructionShip !== true) return false;
+  const done = new Set(empire.completedFields);
+  for (const f of FIELD_ROWS) {
+    if (FIELD_SUBJECTS[f.id] !== 'construction' || f.id.startsWith('advf_')) continue;
+    if (!done.has(f.num)) return false;
+  }
+  return true;
+}
 
 /** Repeatable non-building projects. */
 export const PROJECT_BUILDABLES = new Set([
@@ -24,12 +42,12 @@ export const PROJECT_BUILDABLES = new Set([
   'terraforming',
   'gaia_transformation',
   'colony_base',
+  'artificial_planet',
 ]);
 
 /** Buildables intentionally unavailable until later phases (documented). Their
  * effect entries in effectsMap carry matching stub notes. */
 export const DEFERRED_BUILDABLES = new Set([
-  'artificial_planet',
   'fighter_garrison', // carrier ops omitted by the combat redesign (documented)
   'flux_shield', // superseded shield tiers stay data-only (planetary shield covers defense)
   'planetary_flux_shield',
@@ -58,6 +76,7 @@ export const DEFERRED_BUILDABLES = new Set([
 /** Buildables whose unlocking application id differs from the buildable id.
  * Kept in lockstep with the data tables by tests/data/unlocks.test.ts. */
 export const BUILDABLE_APP_ALIAS: Record<string, string> = {
+  artificial_planet: 'artificial_planet_construction',
   freighter_fleet: 'freighters',
   battle_station: 'battlestation',
   robo_miner_plant: 'robominers',
@@ -168,7 +187,12 @@ export function canQueue(state: GameState, colony: Colony, itemId: string): stri
   const b = buildableById.get(itemId);
   if (!b) return `unknown item ${itemId}`;
   if (DEFERRED_BUILDABLES.has(itemId)) return `${itemId} not available yet`;
-  if (!empireKnowsItem(empire, itemId)) return `${itemId} not researched`;
+  if (itemId === 'construction_ship') {
+    if (state.settings.modes.constructionShip !== true) return 'the construction-ship game option is off';
+    if (!constructionShipUnlocked(state, empire)) return 'requires every construction field to be researched';
+  } else if (!empireKnowsItem(empire, itemId)) {
+    return `${itemId} not researched`;
+  }
   const planet = planetOf(state, colony);
   if (!climateAllows(itemId, planet)) return `${itemId} cannot operate on ${planet.climate}`;
   if (itemId === 'terraforming') {
@@ -191,6 +215,14 @@ export function canQueue(state: GameState, colony: Colony, itemId: string): stri
     // would complete into nothing and burn their production
     const queued = colony.queue.filter((q) => q.item === 'colony_base').length;
     if (queued >= open) return `only ${open} unsettled planet(s) in this system`;
+  }
+  if (itemId === 'artificial_planet') {
+    const candidates = convertiblePlanetsInSystem(state, planet.starId).length;
+    if (candidates === 0) return 'no asteroid belt or gas giant in this system';
+    // project the queue like colony_base: more conversions than candidate
+    // bodies would complete into nothing and burn their production
+    const queued = colony.queue.filter((q) => q.item === 'artificial_planet').length;
+    if (queued >= candidates) return `only ${candidates} convertible body(ies) in this system`;
   }
   if (itemId === 'spy') {
     const queued = colony.queue.filter((q) => q.item === 'spy').length;
