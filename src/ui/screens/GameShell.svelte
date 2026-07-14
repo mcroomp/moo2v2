@@ -5,7 +5,7 @@
   import { syncEmpireColors } from '../colors';
   import { latchEdge, type EdgeLatch, type EdgeLevel } from '../commitEdge';
   import { describeSaveError, downloadRawDatabase, downloadSave } from '../saveload';
-  import Spreadsheet from './Spreadsheet.svelte';
+  import ColonySpreadsheet from '../components/ColonySpreadsheet.svelte';
   import MapView from './MapView.svelte';
   import Research from './Research.svelte';
   import Fleets from './Fleets.svelte';
@@ -204,7 +204,7 @@
   // ---- research breakthrough + colony-ship arrival celebrations ----
   let celebration = $state<{ field: string; granted: string[] } | null>(null);
   let celebrationTimer: ReturnType<typeof setTimeout> | null = null;
-  let arrival = $state<{ starId: number; planetId: number } | null>(null);
+  let arrival = $state<{ shipId: number; starId: number; planetId: number } | null>(null);
   let arrivalTimer: ReturnType<typeof setTimeout> | null = null;
   let processedReports = 0;
   $effect(() => {
@@ -220,15 +220,37 @@
         if (celebrationTimer) clearTimeout(celebrationTimer);
         celebrationTimer = setTimeout(() => (celebration = null), 8000);
       } else if (r.kind === 'colony_ship_arrived') {
+        const shipId = Number(r.payload['shipId'] ?? 0);
+        const starId = Number(r.payload['starId'] ?? 0);
+        const planetId = Number(r.payload['planetId'] ?? 0);
+        // Reports are historical; by the time this shell replays them the ship
+        // may already have settled, died, or lost the race for the planet.
+        const ship = gs?.ships.find((s) => s.id === shipId && s.owner === session().playerId && s.shipKind === 'colony_ship');
+        const colony = gs?.colonies.find((c) => c.planetId === planetId) ?? null;
+        if (!ship || ship.location.kind !== 'star' || ship.location.starId !== starId || colony) continue;
         arrival = {
-          starId: Number(r.payload['starId'] ?? 0),
-          planetId: Number(r.payload['planetId'] ?? 0),
+          shipId,
+          starId,
+          planetId,
         };
         if (arrivalTimer) clearTimeout(arrivalTimer);
         arrivalTimer = setTimeout(() => (arrival = null), 12000);
       }
     }
     processedReports = reports.length;
+  });
+  $effect(() => {
+    const current = arrival;
+    if (!current || !gs) return;
+    const ship = gs.ships.find((s) => s.id === current.shipId && s.owner === session().playerId && s.shipKind === 'colony_ship');
+    const colony = gs.colonies.find((c) => c.planetId === current.planetId) ?? null;
+    if (!ship || ship.location.kind !== 'star' || ship.location.starId !== current.starId || colony) {
+      arrival = null;
+      if (arrivalTimer) {
+        clearTimeout(arrivalTimer);
+        arrivalTimer = null;
+      }
+    }
   });
   const pretty = (id: string) => id.replaceAll('_', ' ');
   const starName = (id: number) => gs?.stars.find((s) => s.id === id)?.name ?? `star ${id}`;
@@ -505,7 +527,7 @@
   {/if}
   <section>
     {#if tab === 'colonies'}
-      <Spreadsheet />
+      <ColonySpreadsheet />
     {:else if tab === 'map'}
       <MapView />
     {:else if tab === 'research'}

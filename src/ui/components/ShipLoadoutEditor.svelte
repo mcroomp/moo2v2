@@ -362,7 +362,7 @@
         </select>
       {/if}
       <span class="mono">-</span>
-      <span class="mono">{stats && typeof stats !== 'string' ? stats.weapons[i]?.space ?? '-' : '-'}</span>
+      <span class="mono">{stats && typeof stats !== 'string' ? (stats.weapons[i] ? stats.weapons[i].spaceEach * stats.weapons[i].count : '-') : '-'}</span>
       <div class="mods">
         {#each wc?.availableMods ?? [] as mod (mod)}
           {@const locked = isModLocked(w.weapon, mod)}
