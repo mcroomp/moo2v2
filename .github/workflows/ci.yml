@@ -35,6 +35,12 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Test game suite
+        run: npm run test:game
+
+      - name: Test balance suite
+        run: npm run test:balance
+
   e2e-playwright:
     runs-on: ubuntu-latest
     needs: build-and-test
